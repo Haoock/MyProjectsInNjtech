@@ -169,6 +169,9 @@ int buffer_to_file(FCB* fcbp,char* Buffer);	//Buffer写入文件
 int file_to_buffer(FCB* fcbp,char* Buffer);	//文件内容读到Buffer,返回文件长度
 int ParseCommand(char *);		//将输入的命令行分解成命令和参数等
 void ExecComd(int);				//执行命令
+int FcComd(int);
+int FcFunction(FCB*,FCB* );
+int MoveComd(int);
 //#define INIT	//决定初始化还是从磁盘读入
 inline string change(char c)
 {
@@ -425,7 +428,7 @@ void ExecComd(int k)		//执行命令
 	char CmdTab[][COMMAND_LEN]={"create","open","write","read","close",
 		"del","dir","cd","md","rd","ren","copy","type","help","attrib",
 		"uof","closeall","block","rewind","fseek","fat","check","exit",
-		"undel","Prompt","udtab"};
+		"undel","Prompt","udtab","fc","move"};
 	int M=sizeof(CmdTab)/COMMAND_LEN;	//统计命令个数
 	for (cid=0;cid<M;cid++)			//在命令表中检索命令
 		if (_stricmp(CmdTab[cid],comd[0])==0)//命令不区分大小写
@@ -485,6 +488,10 @@ void ExecComd(int k)		//执行命令
 				 break;	
 		 case 25:UdTabComd();		//udtab命令
 				 break;
+		 case 26:FcComd(k);
+		         break;
+		 case 27:MoveComd(k);
+		         break;
 		 default:cout<<"\n命令错:"<<comd[0]<<endl;
 	}
 }
@@ -880,13 +887,15 @@ int M_NewDir(char *Name,FCB* p,short fs,char attrib)	//在p位置创建一新子目录
 }
 
 /////////////////////////////////////////////////////////////////
-
+//返回path所在目录的首块号，Name是path中最后的一个名字，k是参数的个数，attrib返回的是目录的属性为，十进制为16 
+//temppath的值是所在目录的绝对地址 
 int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 {
 	// 将path中最后一个名字分离出来，并由引用参数Name带回；
 	// 返回path中除掉Name后，最后一个目录的地址(首块号)；
 	// 必要时调用函数FindPath()，并通过全局变量temppath返
 	// 回path(去掉Name后)的全路径名(绝对路径名)
+
 
 	short i,len,s;
 	FCB* fcbp;
@@ -901,6 +910,7 @@ int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 		if (path[i]=='/')
 			break;
 	Name=&path[i+1];		//取路径中最后一个名字
+	cout<<"i的值为："<<i<<endl;
 	if (i==-1)
 	{
 		s=curpath.fblock;
@@ -924,6 +934,9 @@ int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 			}
 		}
 	}
+	cout<<"tempPath的值为："<<temppath<<endl;
+//	cout<<"attrib的值为：";
+//	printf("%d\n",attrib); 
 	return s;
 }
 
@@ -1334,6 +1347,7 @@ int OpenComd(int k)			//open命令处理函数：打开文件
 	if (s0<1)			//路径错误
 		return s0;		//失败，返回
 	s=FindFCB(FileName,s0,attrib,fcbp);		//取FileName的首块号(查其存在性)
+	cout<<"open命令的s表示的首块号为："<<s<<endl;
 	if (s<0)
 	{
 		cout<<"\n要打开的文件不存在。\n";
@@ -1353,6 +1367,7 @@ int OpenComd(int k)			//open命令处理函数：打开文件
 	for (i=0;i<S;i++)			//在UOF中找空表项
 		if (uof[i].state==0)
 			break;
+    cout<<"在UOF中找到的空表项为："<<i<<endl;
 	if (i==S)
 	{
 		cout<<"\nUOF已满，不能打开文件。\n";
@@ -1423,10 +1438,10 @@ int WriteComd(int k)		//write命令的处理函数
 	FindPath(comd[1],attrib,0,fcbp);	//构成全路径且去掉“..”存于temppath中
 	cout<<"findpath之后的temppath为："<<temppath<<endl;
 	ii_uof=Check_UOF(temppath);			//查UOF
-	cout<<"查UOF之后的值为："<<ii_uof<<endl;
-	cout<<"查到的文件的状态为："<<uof[ii_uof].state;
-	cout<<"文件的属性值为："<<change(uof[ii_uof].attr)<<endl;
-	cout<<"这是if中的内容"<<(uof[ii_uof].attr&'\01')<<endl;
+//	cout<<"查UOF之后的值为："<<ii_uof<<endl;
+//	cout<<"查到的文件的状态为："<<uof[ii_uof].state;
+//	cout<<"文件的属性值为："<<change(uof[ii_uof].attr)<<endl;
+//	cout<<"这是if中的内容"<<(uof[ii_uof].attr&'\01')<<endl;
 	if (ii_uof==S)
 	{
 		cout<<"\n文件"<<temppath<<"未打开或不存在，不能写文件。\n";
@@ -1441,7 +1456,7 @@ int WriteComd(int k)		//write命令的处理函数
 		pos=uof[ii_uof].writep;	//从写指针所指位置开始写(write <文件名>)
 	else		//k=2或3
 	{
-		if (_strnicmp(comd[2],"app",3)==0)
+		if (_strnicmp(comd[2],"app",3)==0)//不区分大小写地比较comd[2]和“app”前三位 
 			pos=uof[ii_uof].fsize+1;	//文件尾部添加模式(write <文件名> append)
 		else if (_strnicmp(comd[2],"ins",3)==0)
 		{
@@ -1470,6 +1485,8 @@ int WriteComd(int k)		//write命令的处理函数
 	}
 	cout<<"这是pos的值："<<pos<<endl; 
 	cout<<"这是UFO的fsize值："<<uof[ii_uof].fsize<<endl;
+	cout<<"这是写指针的位置："<<uof[ii_uof].writep<<endl;
+	cout<<"这是读指针的位置："<<uof[ii_uof].readp<<endl;
 	if (pos<=0)
 	{
 		cout<<"\n命令中提供的写入位置错误。\n";
@@ -1958,17 +1975,23 @@ int ReadComd(int k)		//read命令的处理函数：读文件
 	bnum=(pos-1)/SIZE;		//从文件的第bnum块读(bnum从0开始编号)
 	offset=(pos-1)%SIZE;	//在第bnum块的偏移位置offset处开始读(offset从0开始)
 	b=uof[i_uof].faddr;		//取文件首块号
+	cout<<"bnum的值为："<<bnum<<endl;
+	cout<<"文件的首块号为："<<b<<endl;
 	for (i=0;i<bnum;i++)	//寻找读入的第一个盘块号
 	{
 		b0=b;
 		b=FAT[b];
 	}
+	cout<<"b的值为："<<b<<endl;
 	ii=offset;
+	cout<<"ii的值为："<<ii<<endl;
+	cout<<"readc的值为："<<readc<<endl;
 	while (count<readc)		//读文件至Buffer并显示之
 	{
 		for (i=ii,j=0;i<SIZE;i++,j++)
 		{
 			Buffer[j]=Disk[b][i];
+		    
 			count++;
 			if (count==readc)
 			{
@@ -1981,6 +2004,7 @@ int ReadComd(int k)		//read命令的处理函数：读文件
 		ii=0;
 		b=FAT[b];		//准备读下一个盘块
 	}
+//	cout<<"i的值为："<<i<<endl; 
 	cout<<endl;
 	uof[i_uof].readp=pos+readc;	//调整读指针
 	return 1;
@@ -2435,8 +2459,8 @@ int FindFCB(char *Name,int s,char attrib,FCB* &fcbp)
 				return -1;		//路径错误(至该目录尾部仍未找到)
 			if (strcmp(Name,fcbp->FileName)==0)	//名字找到
 			{
-				cout<<"attrib的值为：";
-				printf("%d\n",attrib); 
+//				cout<<"attrib的值为：";
+//				printf("%d\n",attrib); 
 				if (attrib=='\040')		//attrib为32时，文件、子目录不限
 					return fcbp->Addr;
 				Attrib=fcbp->Fattrib;
@@ -2472,13 +2496,13 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 	strcpy(temppath,"/");
 	if (strcmp(pp,"/")==0)	//是根目录
 		return 1;			//返回根目录的首块号
-		cout<<"这是pp的第一个内容："<<*pp<<endl;
-		cout<<"这是pp的全部内容："<<pp<<endl;
+//		cout<<"这是pp的第一个内容："<<*pp<<endl;
+//		cout<<"这是pp的全部内容："<<pp<<endl;
 	if (*pp=='/')			//绝对路径，从根目录开始
 	{
 		s=1;				//根目录的首块号
 		pp++;
-				cout<<"这是pp的第二个内容："<<*pp<<endl;
+//				cout<<"这是pp的第二个内容："<<*pp<<endl;
 	}
 	else
 	{
@@ -2486,7 +2510,7 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 		strcpy(temppath,curpath.cpath);
 	}
 	j=0;
-	cout<<"进行解析前的路径名为："<<pp<<endl;
+//	cout<<"进行解析前的路径名为："<<pp<<endl;
 	while (*pp!='\0')	//对命令中的路径分解
 	{
 		for (i=0;i<PATH_LEN;i++,pp++)
@@ -2504,7 +2528,7 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 					if (i>FILENAME_LEN-1)	//名字过长则截取前FILENAME_LEN-1个字符
 						Name[FILENAME_LEN-1]='\0';
 					strcpy(paths[j],Name);
-					cout<<paths[j]<<endl;
+//					cout<<paths[j]<<endl;
 					j++;
 				}
 				else
@@ -2515,11 +2539,11 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 			}
 		}
 	}
-	cout<<"这是Name的值："<<Name<<endl;
-	cout<<"这是paths的值"<<paths[0]<<endl;
-	cout<<"这是paths的第二个值"<<paths[1]<<endl;
-	cout<<"这是j的值："<<j<<endl;
-	cout<<"这是temppath的值："<<temppath<<endl;
+//	cout<<"这是Name的值："<<Name<<endl;
+//	cout<<"这是paths的值"<<paths[0]<<endl;
+//	cout<<"这是paths的第二个值"<<paths[1]<<endl;
+//	cout<<"这是j的值："<<j<<endl;
+//	cout<<"这是temppath的值："<<temppath<<endl;
 	for (i=0;i<j;i++)
 	{
 		if (strcmp(paths[i],"..")==0)//处理dir ..的命令 
@@ -2546,9 +2570,9 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 		}
 		if (ffcb)
 		{
-			cout<<"这里返回s的值前："<<s<<endl;
+//			cout<<"这里返回s的值前："<<s<<endl;
 			s=FindFCB(paths[i],s,attrib,fcbp);
-			cout<<"这里返回s的值后："<<s<<endl;
+//			cout<<"这里返回s的值后："<<s<<endl;
 			if (s<0)
 				return s;
 		}
@@ -2697,6 +2721,7 @@ int file_to_buffer(FCB* fcbp,char* Buffer)	//文件内容读到Buffer,返回文件长度
 
 int buffer_to_file(FCB* fcbp,char* Buffer)	//Buffer写入文件
 {
+	cout<<"buffer的值为："<<Buffer<<endl;
 	//成功写入文件，返回1；写文件失败，返回0
 
 	short bn1,bn2,i,j,s,s0,len,size,count=0;
@@ -2740,8 +2765,11 @@ int buffer_to_file(FCB* fcbp,char* Buffer)	//Buffer写入文件
 				j++;
 				count++;
 			}
-			else
+			else{
 				Disk[s][i]=Buffer[j];
+				cout<<"Buffer[j]的值为："<<change(Buffer[j])<<endl;
+			}
+				
 		}
 		s0=s;
 		s=FAT[s];
@@ -2796,10 +2824,10 @@ int ParseCommand(char *p)	//将输入的命令行分解成命令和参数等
 	}
 	///上面是根据空格来将输入的命令分了段 
 	////////////这里来检查一下comd里面存的是什么东西
-	for(int g=0;comd[g][0]!='\0';g++){
-		cout<<comd[g]<<endl;
-	} 
-	cout<<"k的值是多少："<<k<<endl; 
+//	for(int g=0;comd[g][0]!='\0';g++){
+//		cout<<comd[g]<<endl;
+//	} 
+//	cout<<"k的值是多少："<<k<<endl; 
 	
 	
 	for (i=0;comd[0][i]!='\0';i++)
@@ -2818,3 +2846,177 @@ int ParseCommand(char *p)	//将输入的命令行分解成命令和参数等
 }
 
 /////////////////////////////////////////////////////////////////
+int FcComd(int k){
+	short int i,size,s01,s02,s1,s2,s22,b,b0,bnum;
+	char attrib='\0',*FileName1,*FileName2;
+	char gFileName[PATH_LEN];	//存放文件全路径名
+	FCB *fcbp,*fcbp1,*fcbp2;
+	if (k!=2)
+	{
+		cout<<"\n命令中参数太多或太少。\n";
+		return -1;
+	}
+	s01=ProcessPath(comd[1],FileName1,k,0,'\20');//取FileName所在目录的首块号
+//	cout<<"s01的值为："<<s01<<endl;
+//	cout<<"fileName1的值为："<<FileName1<<endl;
+	if (s01<1)			//路径错误
+	{
+		cout<<"路径错误！"<<endl;
+		return s01;		//失败，返回
+	}
+	s1=FindFCB(FileName1,s01,attrib,fcbp);	//取FileName(源文件)的首块号(查其存在性)
+//	cout<<"s1的值为："<<s1<<endl; 
+	if (s1<0)
+	{
+		cout<<"\n要比较的第一个文件不存在。\n";
+		return -1;
+	}
+	fcbp1=fcbp;			//记下源文件目录项指针值
+	
+	s02=ProcessPath(comd[2],FileName2,k,0,'\20');//取FileName2所在目录的首块号
+//	cout<<"s02的值为："<<s02<<endl;
+//	cout<<"fileName2的值为："<<FileName2<<endl;
+	if (s02<1)			//路径错误
+	{
+		cout<<"路径错误！"<<endl;
+		return s02;		//失败，返回
+	}
+	s2=FindFCB(FileName2,s02,attrib,fcbp);	//取FileName(源文件)的首块号(查其存在性)
+//	cout<<"s2的值为："<<s1<<endl; 
+	if (s2<0)
+	{
+		cout<<"\n要比较的第二个文件不存在。\n";
+		return -1;
+	}
+	fcbp2=fcbp;			//记下源文件目录项指针值
+	FcFunction(fcbp1,fcbp2);
+}
+
+int FcFunction(FCB* fcbp1,FCB* fcbp2){
+	short s1,s2,smax;//文件1和文件2的大小，smax是比较大的那个 
+	int addr1,addr2;
+	int flag=0,tempmax,temp1,temp2;
+
+	int difLocation;//用来记录字节位置不同的位置 
+	int i;
+    s1=fcbp1->Fsize;
+    s2=fcbp2->Fsize;
+    char buf1[s1+1];//用来存放出错位置之后的字节流 
+	char buf2[s2+1]; 
+    addr1=fcbp1->Addr;
+    addr2=fcbp2->Addr;
+//    cout<<"文件1的大小和首块号为："<<s1<<" "<<addr1<<endl;
+//    cout<<"文件2的大小和首块号为："<<s2<<" "<<addr2<<endl;
+    if(s1<=s2){
+    	smax=s2;
+	}else{
+		smax=s1;
+	}
+	int time=smax/64+1;//总共有几个盘块 
+//	cout<<"总共有"<<time<<"个盘块"<<endl;
+//	cout<<"文件1下一个盘块为："<<FAT[addr1]<<endl;
+//	cout<<"文件2下一个盘块为："<<FAT[addr2]<<endl;
+	int ii1=0,ii2=0;
+	for(int j=0;j<time;j++){
+		if((smax-SIZE*j)<SIZE){
+			tempmax=smax-SIZE*j;
+		}else{
+			tempmax=SIZE;
+		}
+		if((s1-SIZE*j)<SIZE){
+			temp1=s1-SIZE*j;
+		}else{
+			temp1=SIZE;
+		}
+		if((s2-SIZE*j)<SIZE){
+			temp2=s2-SIZE*j;
+		}else{
+			temp2=SIZE;
+		}
+//		cout<<"temp1的值为："<<temp1<<endl;
+//		cout<<"temp2的值为："<<temp2<<endl; 
+		for(int i=0;i<tempmax;i++){
+			if(i<temp1&&i<temp2){//两个disk都不为空，都能取到字节的时候
+			    if(flag==0){
+			    if(Disk[addr1][i]!=Disk[addr2][i]){//文件内容不同 
+                difLocation=SIZE*j+i+1; 
+				flag=1;
+				cout<<"文件内容不同！位置为第"<<difLocation<<"个字节处"<<endl;
+			    }
+				} 
+			    if(flag==1){
+			    buf1[ii1]=Disk[addr1][i];//这个时候就要记录两个不同位置之后的所有内容了 
+			    buf2[ii2]=Disk[addr2][i];
+//			    cout<<"i"<<i<<endl;
+//			    cout<<"buf1的值为："<<change(buf1[ii1])<<"ii1的值为："<<ii1<<endl;
+//			    cout<<"buf2的值为："<<change(buf2[ii2])<<"ii2的值为："<<ii2<<endl;
+			    ii1++;
+			    ii2++;
+			    
+				}
+			}else if(i>=temp1){//disk1取不到了
+//			    cout<<"disk1取不到了"<<i<<" "<<endl;
+                if(flag==1){
+                buf2[ii2]=Disk[addr2][i];
+				ii2++;
+//				cout<<"buf2的值为："<<change(buf2[ii2])<<endl;
+				}else{
+				flag=1; //两个文件内容不同
+				difLocation=SIZE*j+i+1;  
+				cout<<"文件内容不同！位置为第"<<difLocation<<"个字节处"<<endl;
+				buf2[ii2]=Disk[addr2][i];
+				ii2++;
+//				cout<<"buf2的值为："<<change(buf2[ii2])<<endl;
+				}
+
+			}else if(i>=temp2){//disk2取不到了 
+//			cout<<"disk2取不到了"<<i<<" "<<endl;
+                if(flag==1){
+                buf1[ii1]=Disk[addr1][i];
+				ii1++;
+//				cout<<"buf1的值为："<<change(buf1[ii1])<<endl;
+				}else{
+				flag=1;
+			    difLocation=SIZE*j+i+1;  
+				cout<<"文件内容不同！位置为第"<<difLocation<<"个字节处"<<endl;
+				buf1[ii1]=Disk[addr1][i];
+				ii1++;
+//				cout<<"buf1的值为："<<change(buf1[ii1])<<endl;
+				}
+
+			}	
+	    }
+		addr1=FAT[addr1];
+		addr2=FAT[addr2];
+		if(addr1==-1||addr2==-1){//文件结束 
+			if(flag==0){
+				cout<<"文件内容相同!"<<endl;
+				break;
+			}else if(flag==1){
+				break;
+			}
+		}
+	}
+	buf1[ii1]='\0';
+	buf2[ii2]='\0'; 
+	cout<<"buffer1的值为："<<buf1<<endl;
+	cout<<"buffer2的值为："<<buf2<<endl;
+
+//    	for (i=0;i<SIZE;i++,j++)
+//		{
+//			if (j==len)
+//				break;
+//			if (Buffer[j]=='\\' && Buffer[j+1]=='n')
+//			{
+//				Disk[s][i]='\n';
+//				j++;
+//				count++;
+//			}
+//			else
+//				Disk[s][i]=Buffer[j];
+//		}
+}
+int MoveComd(int k){
+       
+}
+
