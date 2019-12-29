@@ -770,7 +770,7 @@ int DirComd(int k)	//dir命令，显示指定目录的内容（文件名或目录名等）
 			ch=p->FileName[0];	//取文件(目录)名的第一个字符
 //			cout<<"这是"<<ch<<endl;
 			if (ch==(char)0xe5){
-				cout<<"这是空白目录项啊"<<endl;
+//				cout<<"这是空白目录项啊"<<endl;
 			continue;
 			}		//空目录项
 				
@@ -842,6 +842,7 @@ int CdComd(int k)
 			cout<<"\n路径名错误！\n";
 			return -1;
 		}
+		cout<<"comd[]1"<<comd[1]<<endl;
 		s=FindPath(comd[1],attrib,1,fcbp);	//找指定目录(的首块号)
 		cout<<"s的值为："<<s;
 		if (s<1)
@@ -912,9 +913,9 @@ int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 		if (path[i]=='/')
 			break;
 	Name=&path[i+1];		//取路径中最后一个名字
-	cout<<"i的值为："<<i<<endl;
-	cout<<"path的值为："<<path<<endl;
-	cout<<"Name的值为："<<Name<<endl;
+//	cout<<"i的值为："<<i<<endl;
+//	cout<<"path的值为："<<path<<endl;
+//	cout<<"Name的值为："<<Name<<endl;
 	if (i==-1)//说明path中没有"/" 
 	{
 		s=curpath.fblock;
@@ -929,8 +930,9 @@ int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 		}
 		else//说明path中有多个“/” 
 		{
-			path[i]='\0';
-			s=FindPath(path,attrib,1,fcbp);
+			path[i]='\0';//临时去除 
+//			cout<<"path的值为："<<path<<endl;
+			s=FindPath(path,attrib,1,fcbp); 
 			if (s<1)
 			{
 				cout<<"\n路径名错误！\n";
@@ -938,7 +940,7 @@ int ProcessPath(char* path,char* &Name,int k,int n,char attrib)
 			}
 		}
 	}
-	cout<<"tempPath的值为："<<temppath<<endl;
+//	cout<<"tempPath的值为："<<temppath<<endl;
 //	cout<<"attrib的值为：";
 //	printf("%d\n",attrib); 
 	return s;
@@ -986,6 +988,7 @@ int MdComd(int k)		//md命令处理函数
 		return -1;
 	}
 	i=FindFCB(DirName,s,'\040',p);//查新建子目录名是否存在，返回负数则证明不存在同名文件或子目录名 
+	
 	if (i>=0)
 	{
 		cout<<"\n错误：新目录名与文件或子目录重名！\n";
@@ -1001,11 +1004,12 @@ int MdComd(int k)		//md命令处理函数
 			return i;
 	}
 	s0=FindBlankFCB(s,p);//找空白目录项
+	cout<<"\ns的值为："<<s<<" "<<"s0的值为："<<s0<<endl;
 	if (s0<0)			//磁盘满
 		return s0;
 	s0=M_NewDir(DirName,p,s,attrib);	//在p所指位置创建一新子目录项
-//	cout<<"空白子目录首块号为："<<s0<<endl; 
-//		printf("%d\n",attrib);
+	cout<<"空白子目录首块号为："<<s0<<endl; 
+		printf("%d\n",attrib);
 	if (s0<0)		//创建失败
 	{
 		cout<<"\n磁盘空间已满，创建目录失败。\n";
@@ -1026,6 +1030,7 @@ int RdComd(int k)
 	char attrib=(char)16,*DirName;
 	FCB *p,*fcbp;
 	fs=ProcessPath(comd[1],DirName,k,1,attrib);	//返回DirName的父目录的首块号
+//	cout<<"\nfs的值为："<<fs<<endl;
 	if (fs<0)
 		return fs;				//失败，返回
 	s0=s=FindFCB(DirName,fs,attrib,fcbp);//取DirName的首块号
@@ -1543,6 +1548,7 @@ int WriteComd(int k)		//write命令的处理函数
 	cout<<"这是之后的状态："<<uof[ii_uof].state<<endl;
 	cout<<"\n写文件"<<uof[ii_uof].fname<<"成功.\n";
 	strcpy(lastOperatefile,uof[ii_uof].fname);
+	cout<<"\n文件的首块号为："<<fcbp->Addr<<endl;
 		return 1;
 	}
 	//以下处理文件非空的情况
@@ -1578,6 +1584,7 @@ int WriteComd(int k)		//write命令的处理函数
 	uof[ii_uof].writep=uof[ii_uof].fsize+1;
 	cout<<"\n写文件"<<uof[ii_uof].fname<<"成功.\n";
 	strcpy(lastOperatefile,uof[ii_uof].fname);
+	cout<<"\n文件的首块号为："<<fcbp->Addr<<endl;
 	return 1;
 }
 
@@ -1774,7 +1781,7 @@ int DelComd(int k)			//del(删除文件)命令处理函数
 	fcbp->FileName[0]=(char) 0xe5;	//删除目录项
 	while (s>0)						//回收磁盘空间
 	{
-		s0=s;
+		s0=s;//s0是所在目录的首块号 
 		s=FAT[s];
 		FAT[s0]=0;
 		FAT[0]++;
@@ -2617,7 +2624,6 @@ int FindPath(char *pp,char attrib,int ffcb,FCB* &fcbp)
 	}
 //	cout<<"这是Name的值："<<Name<<endl;
 //	cout<<"这是paths的值"<<paths[0]<<endl;
-//	cout<<"这是paths的第二个值"<<paths[1]<<endl;
 //	cout<<"这是j的值："<<j<<endl;
 //	cout<<"这是temppath的值："<<temppath<<endl;
 	for (i=0;i<j;i++)
@@ -3092,56 +3098,387 @@ int FcFunction(FCB* fcbp1,FCB* fcbp2){
 //				Disk[s][i]=Buffer[j];
 //		}
 }
+
+
+
 int MoveComd(int k){
+	short s,s0,count=0,i,j;
+	FCB *p,*fcbp,*p11,*fcbp0;
 	if(k!=2){
 		cout<<"命令参数错误，必须要有两个参数！"<<endl;
 		return -1;
 	}
 	//首选需要知道第一个参数是文件还是目录
-	short s1,i1,s2,i;
-	short temps; 
-	char attrib=(char)16; 
-	bool flag1=false;//如果第一个参数为文件名，则会设置为true; 
-	
-	FCB* fcbp1;//这是第一个参数的fcbp 
-	FCB* fcbp2;//这是第二个参数的fcbp 
-	i=strlen(comd[2]);
-	i1=strlen(comd[1]);
-			if (i1>1 && comd[2][i1-1]=='/')	//路径以"/"结尾，错误
-		{
-			cout<<"\n路径名错误！\n";
-			return -1;
-		}
-		s1=FindPath(comd[1],'\020',1,fcbp1);	//找第一个参数的指定目录(的首块号)
-		cout<<"\ns1的值为："<<s1;
+	short s1,i1,s2,i0,s21,i00;
+	short temps,fs; 
+	char *pp;
+	char attrib=(char)16,*DirName,*DirName1,yn;
+	char tPath1[PATH_LEN],tPath3[PATH_LEN],temp22path[PATH_LEN],tPath4[PATH_LEN];//temp22path是参数二的父目录
+	char temp1path[PATH_LEN],temp2path[PATH_LEN];//用来保存参数一和参数二的完整绝对路径 
+	char *tPath,*tPath2;
+	bool isFile=false;//如果第一个参数为文件名，则会设置为true; 
+	FCB* fcbp1,* fcbp2;//这是第一和第二个参数的fcbp 
+	FCB* Bfcbp1;//空的地方的fcbp 
+	char *DirName11,*DirName22;//第一个参数的完整绝对路径的最后一个文件名,第二个参数的完整绝对路径的最后一个目录名 
+	short fs1,fs2;
+	i0=strlen(comd[1]);
+	i1=strlen(comd[2]);
+	if (i0>1 && comd[1][i0-1]=='/')	//路径以"/"结尾，错误
+	{
+		cout<<"\n路径名错误！\n";
+		return -1;
+	}
+	if (i1>1 && comd[2][i1-1]=='/')	//路径以"/"结尾，错误
+	{
+		cout<<"\n路径名错误！\n";
+		return -1;
+	}
+	s1=FindPath(comd[1],'\020',1,fcbp1);	//找第一个参数的(文件或目录简称目录项)(的首块号)
+	//findPath只能验证是否存在，不能真正找到首块号 
+	//无论comd[1]是相对路径还是绝对路径 
 		if (s1<1)//第一个参数名一定不是目录 
 		{
 			temps=FindPath(comd[1],'\040',1,fcbp1);
-			cout<<"\ntemps的值为："<<temps;
-			if(temps<1){
+			if(temps<0){
 				cout<<"\n第一个参数的文件或目录名不存在";
 				return -1;
 			}
 			// 第一个参数名一定是文件名
-			 flag1=true;
+			isFile=true;
 		}
-		if (i>1 && comd[2][i-1]=='/')	//路径以"/"结尾，错误
+		strcpy(temp1path,temppath);//将第一个参数的全路径名保存在temp1path中 
+		strcpy(tPath4,temppath);//过渡 
+		fs1=ProcessPath(tPath4,DirName11,k,0,attrib);//参数一所在父目录的首块号 
+	s2=FindPath(comd[2],attrib,1,fcbp2);	//找第二个参数的指定目录(的首块号)
+		strcpy(temp2path,temppath);
+		if (s2<1) //说明指定的目录名不存在
 		{
-			cout<<"\n路径名错误！\n";
-			return -1;
-		}
-		s2=FindPath(comd[2],attrib,1,fcbp2);	//找第二个参数的指定目录(的首块号)
-		cout<<"\ns2的值为："<<s2;
-		if (s2<1) 
-		{
-			cout<<"\n指定目录名不存在"<<endl;
 			
-		}else{//说明第二个参数指定的目录已经存在 
-			if(flag1==true){//说明将文件转移到已存在的目录中 
-				
-			}else{//说明将子目录转移到已存在的目录中 
-				
+			if(!isFile){//这时根据第一个参数是否为文件，若不为文件，则进行改名操作
+			pp=comd[2];
+			while(*pp!='\0'){
+				if(*pp=='/'){
+					cout<<"\n错误，不允许"<<comd[2]<<"名字中包含非法字符！"<<endl;
+					return -1;
+					break; 
+				}
+				pp++;
+			}
+			strcpy(fcbp1->FileName,comd[2]);
+			}else{
+				cout<<"\n出错了，指定目录"<<comd[2]<<"不存在！"<<endl;
+				return -1;
+			} 
+			cout<<"\n成功将"<<DirName11<<"更名为"<<comd[2]<<endl;
+			
+			
+		}else
+		{//说明第二个参数指定的目录已经存在 
+		///////////////////////////////////////////////////////// 
+			if(isFile){//说明将文件转移到已存在的目录中 
+			
+			//接下来验证参数一的正确性，即此文件不能正在被使用 
+            cout<<"\ntemp1path的值为："<< temp1path<<endl;//参数一的全路径 
+            i00=Check_UOF(temp1path);		//查UOF
+            if (i00<S){					//该文件已在UOF中
+	            cout<<"\n文件"<<temp1path<<"正在使用，不能删除!\n";
+	            return -3;
+            }
+            
+            //接下来将转移的文件拷贝到目标目录中，首先要查看目标目录中是否存在该文件
+			//若存在则询问用户，若用户说覆盖，则将原文件删除，若不存在则拷贝到该目录下，然后删除原文件 
+//            fs1=ProcessPath(temp1path,DirName11,k,0,attrib);//参数一所在目录的首块号 
+            //接下来验证参数二的正确性，即参数二中不能存在该文件
+            cout<<"DirName11的值为："<<DirName11<<endl; 
+            cout<<"temp2path的值为："<<temp2path<<endl;
+			    if(strcmp(temp2path,"/")==0){
+			    strcpy(tPath1,temp2path);
+			    strcpy(tPath3,temp2path);//tPath3数组为后面的tPath2做准备 
+			    tPath=tPath1;
+			    tPath2=tPath3;
+			    strcat(tPath,DirName11);
+			    strcat(tPath2,DirName11);
+				}else{
+				strcpy(tPath1,temp2path);
+				strcpy(tPath3,temp2path);//tPath3数组为后面的tPath2做准备 
+			    tPath=tPath1;
+			    tPath2=tPath3;
+			    strcat(tPath,"/");
+			    strcat(tPath2,"/");
+			    strcat(tPath,DirName11);
+			    strcat(tPath2,DirName11);
+				}
+//				short s11=ProcessPath(tPath,DirName1,k,0,attrib);
+             short pp1=ProcessPath(tPath2,DirName1,k,0,attrib);//tPath2是第二个参数（目标文件 
+             cout<<"tPath2（目录）的值为："<<tPath2<<endl;
+			 cout<<"tPath（完整路径）的值为："<<tPath<<endl; 
+             cout<<"参数二所在的目录首块号为："<<pp1<<endl;
+             cout<<"DirNmae1的值为："<<DirName1<<endl;
+			 cout<< "DirNmae11的值为："<<DirName11<<endl;
+			 short i44=FindFCB(DirName11,pp1,'\020',p11);//查新文件名是否存在，返回负数则证明不存在同名子目录名 
+			cout<<"i44第一次的值为："<<i44<<endl; 
+			if(i44>=0){
+			cout<<"\n错误：新文件名与子目录重名！\n";
+		    return -1;
+			}
+			 i44=FindFCB(DirName11,pp1,'\0',p11);//查新建子目录名是否存在，返回负数则证明不存在同名子目录名 
+			cout<<"i44的值为："<<i44<<endl;
+			cout<<"p11的filename为："<<p11->FileName<<endl;
+			cout<<"pp1为第二个参数目录的首块数"<<endl;
+			short sss=pp1;
+			if(i44>=0){
+				cout<<"\n新文件名与子文件名"<<tPath<<"重名！是否要覆盖子文件？(y/n) \n";
+	        	cin>>yn;
+	        	if (yn!='N' && yn!='n'){//即删除子文件 
+	        		short	i33=Check_UOF(tPath);		//查UOF
+	        			if (i33<S)					//该文件已在UOF中
+	                {
+		              cout<<"\n文件"<<tPath<<"正在使用，不能删除!删除失败！！\n";
+		              return -3;
+	                }
+	                //删除旧的重名文件 
+	                p11->FileName[0]=(char) 0xe5;	//删除目录项
+	                while (i44>0)						//回收磁盘空间
+	                {//i11是文件 
+		                sss=i44;
+	                	i44=FAT[i44];
+	                	FAT[sss]=0;
+	                	FAT[0]++;
+	                }
+                    	cout<<"\n原文件删除文件成功"<<endl;
+//	               fcbp2->FileName[0]=(char) 0xe5;	//删除目录项
+//		         	while (temps>0){						//回收磁盘空间
+//		        	fs1=temps;//s0是所在目录的首块号 
+//                    temps=FAT[temps];
+//	            	FAT[fs1]=0;
+//	            	FAT[0]++;
+//	                }
+//	                cout<<"\n旧的文件删除成功"<<endl;
+	    
+                    //接下来开始拷贝新文件 并且删除原文件 
+	        		
+				}else{
+					cout<<"\n文件移动失败"<<endl;
+					return -1;
+				} 
+			}
+			//先复制原文件，然后再删除原文件 
+//			fs1=ProcessPath(tPath4,DirName11,k,0,attrib);//参数一所在父目录的首块号 
+			cout<<"fs1的值为////////"<<fs1<<endl; 
+			cout<<"DirNme11的值为："<<DirName11<<endl;
+//            s01=ProcessPath(comd[1],FileName1,k,0,'\20');//取FileName所在目录的首块号
+	        s1=FindFCB(DirName11,fs1,'\0',fcbp1);	//取FileName(源文件)的首块号(查其存在性)
+	        if (s1<0)
+	        {
+		      cout<<"\n要复制的文件不存在。\n";
+		      return -1;
+	       }
+	       fcbp0=fcbp1;			//记下源文件目录项指针值
+	       cout<<"s1(原文件的首块号)为："<<s1<<endl;
+	cout<<"\n第一个文件的名称为："<<temp1path<<endl;
+	cout<<"目标文件完整路径为:"<<tPath<<endl; 
+    cout<<"目标文件目录的首块号"<<pp1<<endl;
+    short h1=pp1;//pp1是第二个参数的目录的首块号为1 
+    	short h2=FindBlankFCB(h1,Bfcbp1);
+    		if (h2<0)
+	{
+		cout<<"\n复制文件失败。\n";
+		return h2;
+	}
+	short	size=fcbp0->Fsize;		//源文件的长度
+	cout<<"目标文件的长度为："<<size<<endl;
+	short	bnum=size/SIZE+(short)(size%SIZE>0);	//计算源文件所占盘块数
+	    if (FAT[0]<bnum)
+	{
+		cout<<"\n磁盘空间已满，不能复制文件。\n";
+		return -6;
+	}
+	*Bfcbp1=*fcbp0;
+	cout<<"原文件的目录项的首块号为："<<fcbp0->Addr<<endl; 
+	cout<<"s1的大小为："<<s1<<endl;
+	  strcpy(Bfcbp1->FileName,DirName11);	//写目标文件名
+	  short	b0=0;
+	  short b;
+	  short ss1=s1;
+	while (ss1>0)		//开始复制文件内容
+	{
+		b=getblock();
+		if (b0==0)
+			Bfcbp1->Addr=b;		//目标文件的首块号
+		else
+			FAT[b0]=b;
+		memcpy(Disk[b],Disk[ss1],SIZE);	//复制盘块
+		ss1=FAT[ss1];				//准备复制下一个盘块
+		b0=b;
+	}
+	cout<<"\n复制文件成功！"<<endl; 
+	cout<<"原文件目录的首块号"<<fs1<<endl;
+	cout<<"原文件首块号："<<s1<<endl;
+	ss1=s1;
+		fcbp1->FileName[0]=(char) 0xe5;	//删除目录项
+	while (ss1>0)						//回收磁盘空间
+	{
+		fs1=ss1;//s0是所在目录的首块号 
+		ss1=FAT[ss1];
+		FAT[fs1]=0;
+		FAT[0]++;
+	}
+	cout<<"\n删除文件成功"<<endl;
+	
+	  
+				 
+				 
+			}else
+			{//说明将子目录转移到已存在的目录中 ,首先要删除子目录，然后再添加 
+				fs=ProcessPath(comd[1],DirName,k,0,attrib);	//返回DirName的父目录的首块号
+					strcpy(temp22path,temppath); 
+         	    if (fs<0)
+		           return fs;				//失败，返回
+		        s0=s=FindFCB(DirName,fs,attrib,fcbp);//取DirName的首块号
+		        while (s>0)		//循环查找，直到目录尾部
+	            {
+		            p=(FCB*) Disk[s];
+		            for (i=0;i<4;i++,p++)
+		            {
+			        if (p->FileName[0]!=(char)0xe5 && p->FileName[0]!='\0')//累计非空目录项
+				       count++;
+		            }
+		          //s0=s;			//记下上一个盘块号
+		        s=FAT[s];		//取下一个盘块号
+	            }
+	            if (count>1)
+	            {
+	            	
+		         cout<<"\n目录"<<DirName<<"非空，不能删除。\n";
+		          return -1;
+	            }
+	            //下面检查第二个参数是否符合要求，检测 
+			 cout<<"\nDirName:"<<DirName<<endl;
+			cout<<"\ncomd[2]的值为："<<comd[2]<<endl;
+			if(strcmp(comd[2],"/")==0){
+			strcpy(tPath1,comd[2]);
+			strcpy(tPath3,comd[2]);//tPath3数组为后面的tPath2做准备 
+			tPath=tPath1;//需要一个tPath的指针指向tPath1 
+			tPath2=tPath3;
+			strcat(tPath,DirName);
+			strcat(tPath2,DirName);//这个时候将完整路径保存下来 在tPath2中 
+			}else{
+				//			tPath3=comd[2];//需要为后面的tPAth2重新赋予新的空间 
+			strcpy(tPath1,comd[2]);
+			strcpy(tPath3,comd[2]);//tPath3数组为后面的tPath2做准备 
+			tPath=tPath1;//需要一个tPath的指针指向tPath1 
+			tPath2=tPath3;
+			strcat(tPath,"/");
+			strcat(tPath2,"/");
+			strcat(tPath,DirName);
+			strcat(tPath2,DirName);//这个时候将完整路径保存下来 在tPath2中 
+			}
+
+			cout<<"\ntPath的 值为:"<<tPath<<endl; 
+            cout<<"\ntPath3的 值为:"<<tPath2<<endl; 
+		    short s11=ProcessPath(tPath,DirName1,k,0,attrib);
+		    s21=s11;
+	        cout<<"目录首块号："<<s11<<endl; 
+	        if (s11<0)
+		      return s11;		//失败，返回
+			if (!IsName(DirName1))		//若名字不符合规则
+	        {
+		     cout<<"\n命令中的新目录名错误。\n";
+		     return -1;
+	        }
+	        short i11=FindFCB(DirName1,s11,'\020',p11);//查新建子目录名是否存在，返回负数则证明不存在同名子目录名 
+	       if (i11>=0)
+	       {
+		     cout<<"\n错误：新目录名子目录重名！\n";
+		    return -1;
+	        }			
+	        i11=FindFCB(DirName1,s11,'\0',p11);//查找子文件是否重名 
+	        if (i11>=0)
+           	{
+	        	cout<<"\n新目录名与子文件名"<<tPath2<<"重名！是否要覆盖子文件？(y/n) \n";
+	        	cin>>yn;
+	        	if (yn!='N' && yn!='n'){//即删除子文件 
+	        		short	i33=Check_UOF(tPath2);		//查UOF
+	        			if (i33<S)					//该文件已在UOF中
+	                {
+		              cout<<"\n文件"<<tPath2<<"正在使用，不能删除!\n";
+		              return -3;
+	                }
+	                p11->FileName[0]=(char) 0xe5;	//删除目录项
+	                while (i11>0)						//回收磁盘空间
+	                {
+		                s11=i11;
+	                	i11=FAT[i11];
+	                	FAT[s11]=0;
+	                	FAT[0]++;
+	                }
+                    	cout<<"\n删除文件成功"<<endl;
+	        		
+				}else{
+					return -1;
+				} 
+	        }
+						    
+	            //注意temppath的值，明天继续 下面开始删除参数一（子目录） 
+//	            cout<<"\ntemppath的值为："<<temppath<<endl;
+	            while (s0>0)			//归还目录DirName所占的磁盘空间
+	            {
+		                s=FAT[s0];			//记下第s0块的后续块号		
+		                FAT[s0]=0;			//回收第s0块
+		                FAT[0]++;			//空闲盘块数增1
+		                s0=s;				//后续块号赋予s0
+	            }	  
+	            fcbp->FileName[0]=(char)0xe5;	//删除DirName的目录项
+	            if (strcmp(temp22path,"/")==0)	//所删除的子目录在根目录
+	            {
+		           cout<<"\n删除目录成功！"<<endl;
+		           
+	            }else{
+	//所删除的子目录DirName不在根目录时，对其父目录作以下处理
+	            s0=s=fs;				//取DirName父目录的首块号
+	            while (s>0)				//整理DirName的父目录空间(回收无目录项的盘块)
+	            {
+		          p=(FCB*) Disk[s];
+		          for (j=i=0;i<4;i++,p++)
+			         if (p->FileName[0]!=(char)0xe5 && p->FileName[0]!='\0')//累计非空目录项
+				        j++;
+		          if (j==0)
+		          {
+			        FAT[s0]=FAT[s];		//调整指针
+			        FAT[s]=0;			//回收s号盘块
+			        FAT[0]++;			//空闲盘块数增1
+			        s=FAT[s0];
+		        }
+		        else
+		       {
+			      s0=s;				//记下上一个盘块号
+			      s=FAT[s];			//s指向下一个盘块
+		    	}
+	           }
+	         cout<<"\n删除目录成功！"<<endl;//删除了目录 
+	     }
+				          
+				          
+			//下面是重新新建目录
+
+	        short s22=FindBlankFCB(s21,p11);//找空白目录项
+	        cout<<"\ns21的值为："<<s21<<" "<<"s22的值为："<<s22<<endl;
+	        if (s22<0)			//磁盘满
+	         	return s22;
+	        s22=M_NewDir(DirName1,p11,s21,attrib);	//在p所指位置创建一新子目录项
+	        cout<<"空白子目录首块号为："<<s22<<endl; 
+		    printf("%d\n",attrib);
+	        if (s22<0)		//创建失败
+	        {
+	        	cout<<"\n磁盘空间已满，创建目录失败。\n";
+	        	return -1;
+            	}
+             	cout<<"\n创建新目录成功!"<<endl; 
+                	return 1;		//新目录创建成功，返回
+	         	
+	
 			}
 		}
+		return 1; 
 }
 
