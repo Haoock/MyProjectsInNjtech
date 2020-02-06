@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- dtd约束 -->
+<!DOCTYPE struts PUBLIC
+        "-//Apache Software Foundation//DTD Struts Configuration 2.5//EN"
+        "http://struts.apache.org/dtds/struts-2.5.dtd">
+
+
+<struts>
+	<!-- Struts。xml的配置文件 -->
+    <!-- 所有匹配*.action的请求都由struts2处理 -->
+    <constant name="struts.action.extension" value="action,," />
+    <!-- 是否启用开发模式 -->
+    <constant name="struts.devMode" value="true" />
+    <!-- struts配置文件改动后，是否重新加载 -->
+    <constant name="struts.configuration.xml.reload" value="true" />
+    <!-- 请求参数的编码方式 -->
+    <constant name="struts.i18n.encoding" value="utf-8" />
+    <!-- 每次HTTP请求系统都重新加载资源文件 -->
+    <constant name="struts.i18n.reload" value="true" />
+    <!-- 让struts2支持动态方法调用 -->
+    <constant name="struts.enable.DynamicMethodInvocation" value="false" />
+    
+	<!--新建一个package，name随意，extends自struts-default才有Action功能,namespace与action构成访问路径 -->
+    <package name="strutsTest" extends="struts-default" namespace="/">
+    	
+    	
+    	<interceptors>
+    		<interceptor name="logininteceptor" class="com.struts2.interceptor.LoginInterceptor"> </interceptor>
+    	</interceptors>
+    	<global-allowed-methods>regex:.*</global-allowed-methods>
+    	<!-- 编写action，name为地址栏输入时用的名字，class为class文件的位置 ，method属性可以执行Action里面其他的方法-->
+    	<!-- method方法可以用通配符的方式method="{1}" -->
+        <action name="hello" class="com.struts2.demo.UserAction">
+        	<!-- name 为刚才编写的action类中，execute返回的值       index.jsp的意思是返回到index.jsp页面 -->
+        	<!-- type默认值为转发操作dispatcher，还有重定向操作redirect -->
+        	<!-- 还可以转发到Action：chain,一般不用它。重定向到Action：redirectAction -->
+        	<result name="success">/secondPage.jsp</result>
+        </action>
+        
+        <action name="user*" class="com.struts2.demo.LoginAction" method="user{1}">
+        	<!-- 2使用自定义拦截器 -->
+        	<interceptor-ref name="logininteceptor">
+        	<!-- param可以忽略拦截器不拦截的方法 -->
+        	<!-- name的属性值：excludeMethods -->
+        		<param name="excludeMethods">userlogin</param>
+        	</interceptor-ref>
+        	
+        	<!-- 3把默认的拦截器再手动配置一遍 -->
+        	<interceptor-ref name="defaultStack"></interceptor-ref>
+        	
+        	<result name="admin" type="redirect">/AdminPage.jsp</result>
+        	<result name="user">/WelcomePage.jsp</result>
+        	<result name="fail">/Login.jsp</result>
+        	<result name="deposit">/DepositPage.jsp</result>
+        	<result name="withdraw">/WithdrawPage.jsp</result>
+        	<result name="getMoney">/CheckBalancePage.jsp</result>
+        	<result name="transferMoney">/TransferAccountPage.jsp</result>
+        	<result name="changeSucc">/ChangePasswordPage.jsp</result>
+        	<result name="changeFail">/ChangePasswordPage.jsp</result>
+        	<result name="deleteinfoSucc">/AdminPage.jsp</result>
+        	<result name="userwelcome">/WelcomePage.jsp</result>
+        </action>
+        <action name="adduser" class="com.struts2.demo.UserAction">
+        	<result name="success" type="redirect">/AdminPage.jsp</result>
+        </action>
+        
+    </package>
+    <package name="strutsjson" extends="json-default" namespace="/">
+    <interceptors>
+    		<interceptor name="logininteceptor" class="com.struts2.interceptor.LoginInterceptor"> </interceptor>
+    	</interceptors>
+    	<global-allowed-methods>regex:.*</global-allowed-methods>
+    	<!-- 编写action，name为地址栏输入时用的名字，class为class文件的位置 ，method属性可以执行Action里面其他的方法-->
+    	<!-- method方法可以用通配符的方式method="{1}" -->
+    	<action name="getTransactionDetails" class="com.struts2.demo.GetJsonData" method="getTransactionDetails">
+        	<result name="getTransSucc" type="json">
+        		<param name="root">jsay</param>
+        	</result>
+        </action>
+        <action name="getUserInfoDetails" class="com.struts2.demo.GetJsonData" method="getUserInfoDetails">
+        	<result name="getUserinfoSucc" type="json">
+        		<param name="root">jsuser</param>
+        	</result>
+        </action>
+    </package>
+    
+</struts>
+<!-- 拦截器在action对象创建之后，在action方法执行之前执行,首先在action所在的标签中声明拦截器 -->
+<!-- 之后在action中引用 -->
+<!-- 拦截器会对action所有的方法进行拦截，所以要将login方法不拦截 -->
